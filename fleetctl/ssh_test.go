@@ -32,7 +32,8 @@ func newMachineState(id, ip string, md map[string]string) machine.MachineState {
 	}
 }
 
-func newFakeRegistryForSsh() client.API {
+func assignNewFakeRegistryForSsh() {
+
 	// clear machineStates for every invocation
 	machineStates = nil
 	machines := []machine.MachineState{
@@ -76,13 +77,13 @@ func newFakeRegistryForSsh() client.API {
 	reg.SetUnitStates(states)
 	reg.SetJobs(jobs)
 
-	return &client.RegistryClient{Registry: reg}
+	capiCtx.Set(&client.RegistryClient{Registry: reg})
+
+	return
 }
 
 func TestSshUnknownMachine(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	_, ok, _ := findAddressInMachineList("asdf")
 	if ok {
@@ -91,9 +92,7 @@ func TestSshUnknownMachine(t *testing.T) {
 }
 
 func TestSshFindMachine(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	ip, _, _ := findAddressInMachineList("c31e44e1-f858-436e-933e-59c642517860")
 	if ip != "1.2.3.4" {
@@ -102,9 +101,7 @@ func TestSshFindMachine(t *testing.T) {
 }
 
 func TestSshFindMachineByUnknownUnitName(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	_, ok, _ := findAddressInRunningUnits("asdf")
 	if ok {
@@ -113,9 +110,7 @@ func TestSshFindMachineByUnknownUnitName(t *testing.T) {
 }
 
 func TestSshFindMachineByUnitName(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	ip, _, _ := findAddressInRunningUnits("j1")
 	if ip != "1.2.3.4" {
@@ -124,9 +119,7 @@ func TestSshFindMachineByUnitName(t *testing.T) {
 }
 
 func TestGlobalLookupByUnknownArgument(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	_, err := globalMachineLookup([]string{"asdf"})
 	if err == nil {
@@ -135,9 +128,7 @@ func TestGlobalLookupByUnknownArgument(t *testing.T) {
 }
 
 func TestGlobalLookupByMachineID(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	ip, err := globalMachineLookup([]string{"c31e44e1-f858-436e-933e-59c642517860"})
 	if err != nil {
@@ -150,9 +141,7 @@ func TestGlobalLookupByMachineID(t *testing.T) {
 }
 
 func TestGlobalLookupByUnitName(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	ip, err := globalMachineLookup([]string{"j1"})
 	if err != nil {
@@ -165,9 +154,7 @@ func TestGlobalLookupByUnitName(t *testing.T) {
 }
 
 func TestGlobalLookupWithAmbiguousArgument(t *testing.T) {
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = newFakeRegistryForSsh()
+	assignNewFakeRegistryForSsh()
 
 	_, err := globalMachineLookup([]string{"hello.service"})
 	if err == nil {

@@ -71,11 +71,6 @@ var (
 	// set of top-level commands
 	commands []*Command
 
-	// global API client used by commands
-	cAPI client.API
-
-	cmu sync.Mutex
-
 	// flags used by all commands
 	globalFlags = struct {
 		Debug   bool
@@ -122,6 +117,27 @@ var (
 
 	cmdExitCode int
 )
+
+type capiContext struct {
+	// global API client used by commands
+	api client.API
+	mu  sync.Mutex
+}
+
+var capiCtx capiContext
+var cAPI client.API = capiCtx.Get()
+
+func (c *capiContext) Get() client.API {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.api
+}
+
+func (c *capiContext) Set(inAPI client.API) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.api = inAPI
+}
 
 var cmdFleet = &cobra.Command{
 	Use:   cliName,
@@ -303,14 +319,13 @@ func getFlagsFromEnv(prefix string, fs *flag.FlagSet) {
 
 func getClientAPI(cCmd *cobra.Command) client.API {
 	var err error
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI, err = getClient(cCmd)
+	api, err := getClient(cCmd)
 	if err != nil {
 		stderr("Unable to initialize client: %v", err)
 		os.Exit(1)
 	}
-	return cAPI
+	capiCtx.Set(api)
+	return api
 }
 
 // getClient initializes a client of fleet based on CLI flags
@@ -1030,9 +1045,7 @@ func checkUnitState(name string, js job.JobState, maxAttempts int, out io.Writer
 func assertUnitState(name string, js job.JobState, out io.Writer) (ret bool) {
 	var state string
 
-	cmu.Lock()
-	defer cmu.Unlock()
-	u, err := cAPI.Unit(name)
+	u, err := capiCtx.Get().Unit(name)
 	if err != nil {
 		log.Warningf("Error retrieving Unit(%s) from Registry: %v", name, err)
 		return

@@ -91,6 +91,10 @@ func newFakeRegistryForCommands(unitPrefix string, unitCount int, template bool)
 	return &client.RegistryClient{Registry: reg}
 }
 
+func assignFakeRegistry(unitPrefix string, unitCount int, isTemplate bool) {
+	capiCtx.Set(newFakeRegistryForCommands(unitPrefix, unitCount, isTemplate))
+}
+
 func appendJobsForTests(jobs *[]job.Job, machine machine.MachineState, prefix string, unitCount int, template bool) {
 	if template {
 		// for start or load operations we may need to wait
@@ -266,9 +270,7 @@ func TestCreateUnitFails(t *testing.T) {
 	type fakeAPI struct {
 		client.API
 	}
-	cmu.Lock()
-	defer cmu.Unlock()
-	cAPI = fakeAPI{}
+	capiCtx.Set(fakeAPI{})
 	var i int
 	var un string
 	var uf *unit.UnitFile

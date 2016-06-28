@@ -67,9 +67,7 @@ func runSubmitUnitsTests(t *testing.T, unitPrefix string, results []commandTestR
 			unitsCount = len(r.units)
 		}
 
-		cmu.Lock()
-		cAPI = newFakeRegistryForCommands(unitPrefix, unitsCount, template)
-		cmu.Unlock()
+		assignFakeRegistry(unitPrefix, unitsCount, template)
 
 		wg.Add(1)
 		go func() {
