@@ -95,20 +95,6 @@ var (
 		EtcdKeyPrefix string
 	}{}
 
-	// flags used by multiple commands
-	sharedFlags = struct {
-		Sign          bool
-		Full          bool
-		NoLegend      bool
-		NoBlock       bool
-		Replace       bool
-		BlockAttempts int
-		Fields        string
-		SSHPort       int
-	}{}
-
-	smu sync.Mutex
-
 	// current command being executed
 	currentCommand string
 
@@ -137,6 +123,38 @@ func (c *capiContext) Set(inAPI client.API) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.api = inAPI
+}
+
+type SharedFlags struct {
+	Sign          bool
+	Full          bool
+	NoLegend      bool
+	NoBlock       bool
+	Replace       bool
+	BlockAttempts int
+	Fields        string
+	SSHPort       int
+}
+
+// flags used by multiple commands
+type sflagsContext struct {
+	sflags SharedFlags
+	mu     sync.Mutex
+}
+
+var sflagsCtx sflagsContext
+var sharedFlags SharedFlags = sflagsCtx.Get()
+
+func (c *sflagsContext) Get() SharedFlags {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.sflags
+}
+
+func (c *sflagsContext) Set(inSflags SharedFlags) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.sflags = inSflags
 }
 
 var cmdFleet = &cobra.Command{
