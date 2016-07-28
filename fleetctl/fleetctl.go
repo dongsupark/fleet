@@ -1045,7 +1045,7 @@ func assertUnitState(name string, js job.JobState, out io.Writer) (ret bool) {
 		state = u.CurrentState
 	}
 
-	if job.JobState(state) != js {
+	if jsToBeChanged(job.JobState(state), js) {
 		log.Debugf("Waiting for Unit(%s) state(%s) to be %s", name, job.JobState(state), js)
 		return
 	}
@@ -1156,6 +1156,30 @@ func machineState(machID string) (*machine.MachineState, error) {
 		}
 	}
 	return nil, nil
+}
+
+// jsToBeChanged returns true if the target state is a more activated state
+// than the current state. For example, it returns true if it's a transition
+// from inactive to launched, but false for other way around.
+func jsToBeChanged(cur job.JobState, tgt job.JobState) bool {
+	switch tgt {
+	case job.JobStateInactive:
+		return false
+		break
+	case job.JobStateLoaded:
+		if cur == job.JobStateInactive {
+			return true
+		}
+		break
+	case job.JobStateLaunched:
+		if cur == job.JobStateInactive || cur == job.JobStateLoaded {
+			return true
+		}
+		break
+	default:
+		break
+	}
+	return false
 }
 
 // cachedMachineState makes a best-effort to retrieve the MachineState of the given machine ID.
