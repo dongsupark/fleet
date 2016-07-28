@@ -890,18 +890,26 @@ func isLocalUnitDifferent(cCmd *cobra.Command, file string, su *schema.Unit, fat
 
 func lazyLoadUnits(args []string) ([]*schema.Unit, error) {
 	units := make([]string, 0, len(args))
+	js := job.JobStateLoaded
 	for _, j := range args {
-		units = append(units, unitNameMangle(j))
+		uName := unitNameMangle(j)
+		if unitToBeChanged(uName, js) {
+			units = append(units, uName)
+		}
 	}
-	return setTargetStateOfUnits(units, job.JobStateLoaded)
+	return setTargetStateOfUnits(units, js)
 }
 
 func lazyStartUnits(args []string) ([]*schema.Unit, error) {
 	units := make([]string, 0, len(args))
+	js := job.JobStateLaunched
 	for _, j := range args {
-		units = append(units, unitNameMangle(j))
+		uName := unitNameMangle(j)
+		if unitToBeChanged(uName, js) {
+			units = append(units, uName)
+		}
 	}
-	return setTargetStateOfUnits(units, job.JobStateLaunched)
+	return setTargetStateOfUnits(units, js)
 }
 
 // setTargetStateOfUnits ensures that the target state for the given Units is set
@@ -1156,6 +1164,31 @@ func machineState(machID string) (*machine.MachineState, error) {
 		}
 	}
 	return nil, nil
+}
+
+// unitToBeChanged returns true if state of a given unit is a more activated
+// state than the current state. A wrapper of jsToBeChanged.
+func unitToBeChanged(name string, js job.JobState) bool {
+	var state string
+
+	u, err := cAPI.Unit(name)
+	if err != nil {
+		log.Warningf("Error retrieving Unit(%s) from Registry: %v", name, err)
+		return false
+	}
+	if u == nil {
+		log.Warningf("Unit %s not found", name)
+		return false
+	}
+
+	// If this is a global unit, CurrentState will never be set. Instead, wait for DesiredState.
+	if suToGlobal(*u) {
+		state = u.DesiredState
+	} else {
+		state = u.CurrentState
+	}
+
+	return jsToBeChanged(job.JobState(state), js)
 }
 
 // jsToBeChanged returns true if the target state is a more activated state
